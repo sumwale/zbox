@@ -98,15 +98,12 @@ if [ -n "$timezone" ]; then
   chmod 0644 /etc/timezone
 fi
 
-# generate /etc/machine-id which is required by some apps
-/usr/bin/dbus-uuidgen --ensure=/etc/machine-id
-
 # add the user with the same UID/GID as provided which should normally be the same as the
 # user running this ybox (which avoids --userns=keep-id from increasing the image size
 #   else the image size may get nearly doubled)
 groupadd -g $gid $group
 echo_color "$fg_blue" "Added group '$group'"
-useradd -m -g $group -G nobody,video,lp,mail \
+useradd -m -g $group \
   -u $uid -d /home/$user -s /bin/bash -c "$name" $user
 usermod --lock $user
 
@@ -120,6 +117,12 @@ sudoers_file=/etc/sudoers.d/$user
 echo "$user ALL=(ALL:ALL) NOPASSWD: ALL" > $sudoers_file
 chmod 0440 $sudoers_file
 echo_color "$fg_purple" "Added admin user '$user' to sudoers with NOPASSWD"
+
+# generate /etc/machine-id which is required by some apps
+if ! "/usr/bin/dbus-uuidgen --get=/etc/machine-id " 2>/dev/null; then
+  rm /etc/machine-id
+  /usr/bin/dbus-uuidgen --ensure=/etc/machine-id
+fi
 
 # change ownership of user's /run/user/<uid> tree which may have root ownership due to the
 # docker bind mounts
